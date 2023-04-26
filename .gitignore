@@ -1,0 +1,5 @@
+/dispatcher/src/main/resources/application.properties
+/common-rabbitmq/target/
+/dispatcher/target/
+/logs/
+/.idea/
