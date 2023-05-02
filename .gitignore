@@ -3,3 +3,4 @@
 /dispatcher/target/
 /logs/
 /.idea/
+/node/src/main/resources/application.properties
