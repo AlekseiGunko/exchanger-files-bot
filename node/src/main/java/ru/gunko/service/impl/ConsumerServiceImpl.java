@@ -3,20 +3,19 @@ package ru.gunko.service.impl;
 import lombok.extern.log4j.Log4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Service;
-import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import ru.gunko.service.ConsumerService;
-import ru.gunko.service.ProducerService;
+import ru.gunko.service.MainService;
 
 import static ru.gunko.model.RabbitQueue.*;
 
 @Service
 @Log4j
 public class ConsumerServiceImpl implements ConsumerService {
-    private final ProducerService producerService;
+    private final MainService mainService;
 
-    public ConsumerServiceImpl(ProducerService producerService) {
-        this.producerService = producerService;
+    public ConsumerServiceImpl(MainService mainService) {
+        this.mainService = mainService;
     }
 
     @Override
@@ -24,12 +23,7 @@ public class ConsumerServiceImpl implements ConsumerService {
     public void ConsumerTextMessageUpdate(Update update) {
 
         log.debug("NODE: Text message is received");
-
-        var message = update.getMessage();
-        var sendMessage = new SendMessage();
-        sendMessage.setChatId(message.getChatId().toString());
-        sendMessage.setText("Hello node");
-        producerService.producerAnswer(sendMessage);
+        mainService.processTextMessage(update);
 
     }
 
@@ -38,6 +32,7 @@ public class ConsumerServiceImpl implements ConsumerService {
     public void ConsumerDocMessageUpdate(Update update) {
 
         log.debug("NODE: Doc message is received");
+        mainService.processDocMessage(update);
     }
 
     @Override
@@ -45,6 +40,7 @@ public class ConsumerServiceImpl implements ConsumerService {
     public void ConsumerPhotoMessageUpdate(Update update) {
 
         log.debug("NODE: Photo message is received");
+        mainService.processPhotoMessage(update);
 
     }
 }
