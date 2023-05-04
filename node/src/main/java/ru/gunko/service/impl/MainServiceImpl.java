@@ -7,10 +7,15 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.User;
 import ru.gunko.dao.AppUserDAO;
 import ru.gunko.dao.RawDataDAO;
+import ru.gunko.entity.AppDocument;
+import ru.gunko.entity.AppPhoto;
 import ru.gunko.entity.AppUser;
 import ru.gunko.entity.RawData;
+import ru.gunko.exceptions.UploadFileException;
+import ru.gunko.service.FileService;
 import ru.gunko.service.MainService;
 import ru.gunko.service.ProducerService;
+import ru.gunko.service.enums.ServiceCommands;
 
 import static ru.gunko.entity.enums.UserState.BASIC_STATE;
 import static ru.gunko.entity.enums.UserState.WAIT_FOR_EMAIL_STATE;
@@ -23,11 +28,14 @@ public class MainServiceImpl implements MainService {
     private final RawDataDAO rawDataDAO;
     private final ProducerService producerService;
     private final AppUserDAO appUserDAO;
+    private final FileService fileService;
 
-    public MainServiceImpl(RawDataDAO rawDataDAO, ProducerService producerService, AppUserDAO appUserDAO) {
+    public MainServiceImpl(RawDataDAO rawDataDAO, ProducerService producerService,
+                           AppUserDAO appUserDAO, FileService fileService) {
         this.rawDataDAO = rawDataDAO;
         this.producerService = producerService;
         this.appUserDAO = appUserDAO;
+        this.fileService = fileService;
     }
 
     @Override
@@ -40,7 +48,9 @@ public class MainServiceImpl implements MainService {
         var text = update.getMessage().getText();
         var output = "";
 
-        if (CANCEL.equals(text)) {
+        var serviceCommands = ServiceCommands.fromValue(text);
+
+        if (CANCEL.equals(serviceCommands)) {
             output = cancelProcess(appUser);
         } else if (BASIC_STATE.equals(userState)) {
             output = processServiceCommand(appUser, text);
@@ -53,7 +63,6 @@ public class MainServiceImpl implements MainService {
 
         var chatId = update.getMessage().getChatId();
         sendAnswer(output, chatId);
-
     }
 
     @Override
@@ -66,9 +75,16 @@ public class MainServiceImpl implements MainService {
             return;
         }
 
-        //TODO добавить сохранение документа
-        var answer = "Документ успешно загружен! Ссылка для скачивания: skachaityt.com";
-        sendAnswer(answer, chatId);
+        try {
+            AppDocument doc = fileService.processDoc(update.getMessage());
+            //TODO добавить генерацию ссылки для скачивания документа
+            var answer = "Документ успешно загружен! Ссылка для скачивания: skachaityt.com";
+            sendAnswer(answer, chatId);
+        } catch (UploadFileException e) {
+            log.error(e);
+            String error = "Файл не был загружен. Повторите попытку позже.";
+            sendAnswer(error, chatId);
+        }
     }
 
     @Override
@@ -81,9 +97,16 @@ public class MainServiceImpl implements MainService {
             return;
         }
 
-        //TODO добавить сохранение документа
-        var answer = "Фото успешно загружено! Ссылка для скачивания: skachaityt.com";
-        sendAnswer(answer, chatId);
+        try{
+            AppPhoto photo = fileService.processPhoto(update.getMessage());
+            //TODO добавить генерацию ссылки для скачивания фото
+            var answer = "Фото успешно загружено! Ссылка для скачивания: skachaityt.com";
+            sendAnswer(answer, chatId);
+        } catch (UploadFileException e) {
+            log.error(e);
+            String error = "Фото не было загружено. Повторите попытку позже.";
+            sendAnswer(error, chatId);
+        }
     }
 
     private boolean isNotAllowToSendContent(Long chatId, AppUser appUser) {
